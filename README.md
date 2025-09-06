@@ -48,7 +48,7 @@ This is a **browser-based implementation of the board game Catan** with a fixed 
    ```bash
    git clone https://github.com/yourusername/catan.git
    cd catan
-````
+```
 
 2. Open the game:
 
