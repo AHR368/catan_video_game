@@ -1,0 +1,1976 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Catan</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="icon" href="favicon.ico" type="image/x-icon">
+<style>
+  :root{
+    --bg:#eef7f6;--card:#ffffff;--muted:#617073;--accent:#117a72;--accent-2:#16a085;
+  }
+  *{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#f0fbfa 0%,var(--bg) 100%);color:#062626}
+  header{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 18px}
+  h1{font-size:18px;margin:0;color:var(--accent)}
+  .app{display:flex;gap:12px;padding:8px;max-width:1200px;margin:0 auto;align-items:flex-start}
+  .left{flex:1;display:flex;flex-direction:column;gap:12px}
+  .card{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 8px 30px rgba(20,30,30,0.06)}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  button{background:var(--accent);color:white;border:0;padding:8px 12px;border-radius:10px;font-weight:700;cursor:pointer}
+  button.secondary{background:#fff;color:var(--accent);border:1px solid #e6f0ef}
+  button.small{padding:6px 8px;font-size:14px;border-radius:8px}
+  .board-wrap{width:100%;max-width:900px;overflow:auto;padding:6px;position:relative}
+  svg#boardSvg{width:100%;height:auto;max-height:76vh;border-radius:10px;display:block}
+  .right{width:360px;min-width:260px;display:flex;flex-direction:column;gap:12px}
+  .players{display:flex;flex-direction:column;gap:8px}
+  .player-row{display:flex;align-items:center;gap:8px;padding:8px;border-radius:12px;justify-content:space-between}
+  .player-dot{width:14px;height:14px;border-radius:50%}
+  .resources{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .res-pill{background:#fbffff;padding:6px 8px;border-radius:10px;border:1px solid #eef2f2;font-weight:700;display:inline-flex;gap:6px;align-items:center}
+  .muted{color:var(--muted);font-size:13px}
+  .vp{background:linear-gradient(90deg,#fff7ec,#fffbf1);padding:6px 10px;border-radius:10px;font-weight:800;border:1px solid #f3e6ce}
+  .log{font-size:13px;max-height:160px;overflow:auto;padding:6px;background:#fbfbfb;border-radius:8px;border:1px solid #f0f0f0}
+  .section-title{font-weight:800;margin:8px 0}
+  .center-message{position:fixed;left:0;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+  .center-toast{pointer-events:auto;max-width:92%;min-width:260px;background:linear-gradient(180deg,rgba(255,255,255,0.98),#fff);padding:18px;border-radius:14px;box-shadow:0 24px 60px rgba(20,40,40,0.18);text-align:center;backdrop-filter: blur(6px);transform-origin:center center;animation:popIn 400ms cubic-bezier(.2,.9,.3,1);border:1px solid rgba(10,20,20,0.03)}
+  .center-toast h2{margin:0;font-size:22px;color:var(--accent)}
+  .center-toast p{margin:8px 0 0;color:var(--muted)}
+  .center-toast .controls{justify-content:center;margin-top:12px}
+  @keyframes popIn{from{transform:scale(.88) translateY(12px);opacity:0}to{transform:scale(1);opacity:1}}
+  .dice{width:64px;height:64px;border-radius:12px;background:linear-gradient(180deg,#fff,#f2fbfa);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;border:1px solid #e6f4f2;box-shadow:0 8px 18px rgba(30,80,80,0.06)}
+  .dice.rolling{animation:rollAnim 700ms cubic-bezier(.2,.9,.3,1) infinite}
+  @keyframes rollAnim{0%{transform:rotate(0) scale(1)}25%{transform:rotate(30deg) scale(.98)}50%{transform:rotate(-12deg) scale(1.02)}100%{transform:rotate(0) scale(1)}}
+  .fx-layer{position:absolute;left:0;top:0;right:0;bottom:0;pointer-events:none;overflow:visible}
+  .floating{position:absolute;font-size:18px;padding:6px;border-radius:12px;background:rgba(255,255,255,0.95);border:1px solid rgba(0,0,0,0.04);display:inline-flex;align-items:center;justify-content:center;transform-origin:center center;animation:fly 900ms cubic-bezier(.2,.9,.2,1) forwards;}
+  @keyframes fly{0%{opacity:0;transform:translateY(0) scale(.8)}12%{opacity:1;transform:translateY(-10px) scale(1.05)}70%{opacity:1}100%{opacity:0;transform:translateY(-120px) scale(.6)}}
+  .node-highlight{animation:nodePulse 1200ms ease-in-out infinite}
+  @keyframes nodePulse{0%{transform:scale(1);opacity:1}50%{transform:scale(1.18);opacity:.85}100%{transform:scale(1);opacity:1}}
+  .hint{font-size:13px;color:var(--muted)}
+  .trade-modal .row{display:flex;gap:8px;align-items:center;margin:8px 0}
+  select,input[type="number"]{padding:8px;border-radius:8px;border:1px solid #e8f0ef}
+  .btn-ghost{background:#fff;border:1px solid #e8f0ef;color:var(--muted);padding:8px;border-radius:8px}
+  .harbor-badge{font-weight:700;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.95);border:1px dashed rgba(0,0,0,0.06);display:inline-flex;gap:6px;align-items:center}
+  .harbor-2{background:linear-gradient(90deg,#fdf7ee,#fffdf7)}
+  .harbor-3{background:linear-gradient(90deg,#f0fbff,#f7fff9)}
+  /* resource-gain badge styles */
+  .gain-badge{display:inline-flex;gap:6px;align-items:center;padding:6px;border-radius:8px;background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.06);margin-left:8px;opacity:1;transition:opacity 300ms ease, transform 300ms ease;}
+  .gain-pill{font-weight:800;padding:4px 6px;border-radius:6px;background:#f6fffb;border:1px solid #e7f7f2;font-size:13px;display:inline-flex;gap:6px;align-items:center}
+  .badge-flag{display:inline-block;background:#fff;padding:4px 8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);font-weight:700;font-size:11px;margin-left:6px}
+  @media (max-width:900px){.app{flex-direction:column;padding:8px}.right{width:100%}}
+  /* small modals */
+  .small-modal { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.35); z-index:9999; }
+  .small-modal .box { background:white; padding:14px; border-radius:12px; max-width:520px; width:92%; box-shadow:0 18px 40px rgba(10,20,20,0.16); }
+  .player-list-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px;border-radius:8px;border:1px solid #f0f0f0;margin-bottom:8px}
+  .color-input { width:34px; height:22px; border-radius:6px; border:1px solid #ddd; display:inline-block; vertical-align:middle; cursor:pointer; }
+  .discard-count { margin-left:8px; color:var(--muted); font-weight:700; font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Catan — physical map (fixed road placement & edge ports)</h1>
+  <div class="muted">Local pass & play • First to 10 VP</div>
+</header>
+
+<div class="app">
+  <div class="left">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <label class="muted">Players</label>
+          <!-- MAIN SCREEN playerCount SELECT REMOVED (kept in setup modal) -->
+          <button id="newGame" class="small secondary">New Game (setup)</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div id="diceWrap" style="display:flex;gap:8px;align-items:center">
+            <div class="muted">Dice</div>
+            <div id="diceBox" class="dice">-</div>
+          </div>
+          <button id="rollBtn">Roll Dice</button>
+          <button id="endTurnBtn" class="small secondary">End Turn</button>
+        </div>
+      </div>
+
+      <div class="hint" style="margin-top:8px">Tip: Click any legal edge during your turn to build a road — click a legal node to build a settlement or click your own settlement to upgrade it to a city (resources required).</div>
+
+      <div class="board-wrap" id="boardWrap">
+        <svg id="boardSvg" viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="fx-layer" id="fxLayer"></div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:8px;flex-wrap:wrap">
+        <div class="controls">
+          <button id="buildBtn" class="small">Build</button>
+          <button id="buyDevBtn" class="small">Buy Dev</button>
+          <button id="playDevBtn" class="small secondary">Play Dev</button>
+          <button id="tradeBtn" class="small">Trade</button>
+          <!-- Move Robber button removed from main game screen as requested -->
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="muted">Turn</div>
+          <div id="turnLabel" style="font-weight:800"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Game Log</div>
+      <div class="log" id="gameLog"></div>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="card">
+      <div class="section-title">Players</div>
+      <div id="playersList" class="players"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+        <div>
+          <div class="muted">Current</div>
+          <div id="currentPlayerName" style="font-weight:900"></div>
+        </div>
+        <div style="text-align:right">
+          <div class="muted">VP</div>
+          <div id="currentPlayerVP" class="vp">0</div>
+        </div>
+      </div>
+
+      <div style="margin-top:10px">
+        <div class="section-title">Resources</div>
+        <div id="currentResources" class="resources"></div>
+      </div>
+
+      <div style="margin-top:10px">
+        <div class="section-title">Best bank rate</div>
+        <div id="bestRate" class="muted">(Roll / pick a tile to see)</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Quick rules & help</div>
+      <div class="muted" style="font-size:13px">
+        - Roll dice at start of your turn. 7 causes discards & robber move. Knight also triggers discard (per your request).<br/>
+        - Build costs (UI & tooltip): Road (Brick + Wood), Settlement (Brick + Wood + Wool + Grain), City (3 Ore + 2 Grain), Development (Ore + Wool + Grain).<br/>
+        - Trade modal enforces active-player trading; bank trades use 4:1/3:1/2:1 depending on harbors you control.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- center guidance/message area -->
+<div class="center-message" id="centerMessageArea" aria-hidden="true" style="display:none">
+  <div class="center-toast" id="centerToast">
+    <h2 id="centerTitle">Welcome</h2>
+    <p id="centerText">Follow the steps shown here.</p>
+    <div class="controls" style="margin-top:12px">
+      <button id="centerNext" class="small">Next</button>
+      <button id="centerSkip" class="small secondary">Skip Tutorial</button>
+    </div>
+  </div>
+</div>
+
+<!-- Build modal -->
+<div id="modal" style="display:none;position:fixed;inset:0;background:rgba(8,15,15,0.25);align-items:center;justify-content:center;padding:12px">
+  <div style="background:white;padding:14px;border-radius:12px;max-width:560px;width:96%;box-shadow:0 18px 40px rgba(10,20,20,0.16)">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="font-weight:900">Build</div>
+      <button onclick="closeModal()" class="small secondary">Close</button>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="small" onclick="startBuild('road')">Road — 🧱+🌲</button>
+      <button class="small" onclick="startBuild('settlement')">Settlement — 🧱+🌲+🌾+🐑</button>
+      <button class="small" onclick="startBuild('city')">City — ⛏️⛏️⛏️ + 🌾🌾</button>
+    </div>
+    <div id="buildHelp" style="margin-top:10px;color:var(--muted)"></div>
+  </div>
+</div>
+
+<!-- Trade modal (improved UI) -->
+<div id="tradeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);align-items:center;justify-content:center;padding:12px">
+  <div style="background:white;padding:14px;border-radius:12px;max-width:520px;width:96%;box-shadow:0 18px 40px rgba(10,20,20,0.16)" class="trade-modal">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="font-weight:900">Trade</div>
+      <button onclick="closeTradeModal()" class="small secondary">Close</button>
+    </div>
+
+    <div style="margin-top:10px">
+      <div style="font-weight:800;margin-top:6px">Bank trade (best available rate)</div>
+      <div style="margin-top:8px" class="muted" id="bankRateInfo">Active player's best rate: 4:1</div>
+      <div class="row" style="margin-top:8px">
+        <select id="bankGive">
+          <option value="">Give (n)</option>
+          <option value="wood">wood 🌲</option>
+          <option value="brick">brick 🧱</option>
+          <option value="sheep">sheep 🐑</option>
+          <option value="wheat">wheat 🌾</option>
+          <option value="ore">ore ⛏️</option>
+        </select>
+        <select id="bankGet">
+          <option value="">Get (1)</option>
+          <option value="wood">wood 🌲</option>
+          <option value="brick">brick 🧱</option>
+          <option value="sheep">sheep 🐑</option>
+          <option value="wheat">wheat 🌾</option>
+          <option value="ore">ore ⛏️</option>
+        </select>
+        <button class="small" onclick="confirmBankTrade()">Trade</button>
+      </div>
+
+      <hr style="margin:12px 0"/>
+
+      <div style="font-weight:800">Player-to-player transfer</div>
+      <div class="row">
+        <label class="muted" style="width:120px">From player</label>
+        <select id="tradeFrom"></select>
+      </div>
+      <div class="row">
+        <label class="muted" style="width:120px">To player</label>
+        <select id="tradeTo"></select>
+      </div>
+      <div class="row">
+        <label class="muted" style="width:120px">Resource</label>
+        <select id="tradeResource">
+          <option value="wood">wood 🌲</option>
+          <option value="brick">brick 🧱</option>
+          <option value="sheep">sheep 🐑</option>
+          <option value="wheat">wheat 🌾</option>
+          <option value="ore">ore ⛏️</option>
+        </select>
+      </div>
+      <div class="row">
+        <label class="muted" style="width:120px">Amount</label>
+        <input id="tradeAmount" type="number" min="0" value="1" style="width:80px"/>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
+        <button class="btn-ghost" onclick="prefillTradeToCurrent()">Give to Current</button>
+        <button class="small" onclick="confirmPlayerTrade()">Confirm Transfer</button>
+      </div>
+
+      <div id="tradeStatus" style="margin-top:8px;color:var(--muted)"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Discard modal -->
+<div id="discardModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:12px">
+  <div style="background:white;padding:14px;border-radius:12px;max-width:560px;width:96%;box-shadow:0 18px 40px rgba(10,20,20,0.16)">
+    <div style="font-weight:900;margin-bottom:8px">Discard cards (half down)</div>
+    <div class="muted" id="discardInstruction">You must discard X cards</div>
+    <div id="discardGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px">
+      <div>Wood 🌲 <input id="dWood" type="number" min="0" value="0" style="width:80px"/></div>
+      <div>Brick 🧱 <input id="dBrick" type="number" min="0" value="0" style="width:80px"/></div>
+      <div>Sheep 🐑 <input id="dSheep" type="number" min="0" value="0" style="width:80px"/></div>
+      <div>Wheat 🌾 <input id="dWheat" type="number" min="0" value="0" style="width:80px"/></div>
+      <div>Ore ⛏️ <input id="dOre" type="number" min="0" value="0" style="width:80px"/></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+      <button class="btn-ghost" onclick="cancelDiscard()">Cancel</button>
+      <button class="small" onclick="submitDiscard()">Submit discard</button>
+    </div>
+  </div>
+</div>
+
+<!-- Dev preview modal (private to buyer) -->
+<div id="devPreviewModal" style="display:none" class="small-modal" aria-hidden="true">
+  <div class="box">
+    <div style="font-weight:900" id="devPreviewTitle">You bought a development card</div>
+    <div id="devPreviewText" style="margin-top:8px;color:var(--muted)">Only the buying player should look. Click Reveal to see the card.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn-ghost" onclick="closeDevPreview()">Close</button>
+      <button class="small" id="devRevealBtn" onclick="revealDevCard()">Reveal</button>
+    </div>
+  </div>
+</div>
+
+<!-- Dev revealed content modal (after reveal) -->
+<div id="devRevealedModal" style="display:none" class="small-modal" aria-hidden="true">
+  <div class="box">
+    <div style="font-weight:900" id="devRevealedTitle">Dev card preview</div>
+    <div id="devRevealedText" style="margin-top:8px;color:var(--muted)"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="small" onclick="closeDevRevealed()">I understand</button>
+    </div>
+  </div>
+</div>
+
+<!-- Play Dev modal (clean UI for playing dev cards) -->
+<div id="playDevModal" style="display:none" class="small-modal" aria-hidden="true">
+  <div class="box">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="font-weight:900">Play Development Card</div>
+      <button class="small secondary" onclick="closePlayDevModal()">Close</button>
+    </div>
+    <div id="playDevList" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<!-- Player info modal (view resources anytime) -->
+<div id="playerInfoModal" style="display:none" class="small-modal" aria-hidden="true">
+  <div class="box">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="font-weight:900" id="playerInfoTitle">Player</div>
+      <button class="small secondary" onclick="closePlayerInfo()">Close</button>
+    </div>
+    <div id="playerInfoBody" style="margin-top:8px;color:var(--muted)"></div>
+  </div>
+</div>
+
+<!-- Confirm Build modal -->
+<div id="confirmBuildModal" style="display:none" class="small-modal" aria-hidden="true">
+  <div class="box">
+    <div style="font-weight:900" id="confirmBuildTitle">Confirm Build</div>
+    <div id="confirmBuildText" style="margin-top:8px;color:var(--muted)"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn-ghost" onclick="cancelConfirmBuild()">Cancel</button>
+      <button class="small" id="confirmBuildOk" onclick="okConfirmBuild()">Yes — Place</button>
+    </div>
+  </div>
+</div>
+
+<!-- Setup modal for player names/colors/start -->
+<div id="setupModal" style="display:none" class="small-modal" aria-hidden="true">
+  <div class="box">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="font-weight:900">New Game Setup</div>
+      <button class="small secondary" onclick="closeSetupModal()">Close</button>
+    </div>
+    <div style="margin-top:10px">
+      <div style="margin-bottom:8px"><label class="muted">Number of players</label>
+        <select id="setupPlayerCount" style="margin-left:8px"></select>
+      </div>
+      <div id="setupPlayersArea"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+        <button class="btn-ghost" onclick="randomizeColors()">Randomize colors</button>
+        <button class="small" onclick="startGameFromSetup()">Start Game</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- Utilities ---------- */
+function id(s){return document.getElementById(s)}
+function randShuffle(a){let arr=a.slice();for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}return arr}
+function log(msg){const n=document.createElement('div');n.textContent=msg;id('gameLog').prepend(n)}
+const RES_ICON = {wood:'🌲',brick:'🧱',sheep:'🐑',wheat:'🌾',ore:'⛏️',desert:'⛰️'};
+
+/* ---------- Game state ---------- */
+let game = {
+  players: [], playerCount:4, currentPlayer:0, phase:'setup',
+  setupOrder:[], setupIndex:0,
+  board:{hexes:[],nodes:[],edges:[],robberHexId:null,harbors:[]},
+  dice:[0,0], devDeck: []
+};
+let moveRobberMode = false;
+let waitingDiscardQueue = [];
+let discardResolveCallback = null;
+let specialRoadBuild = {active:false, remaining:0};
+
+/* temporary closures used by confirm build */
+let _confirmCallback = null;
+
+/* ---------- Board geometry helpers ---------- */
+function axialToPixel(q,r,size=60,origin={x:500,y:320}) {
+  const x = size * Math.sqrt(3) * (q + r/2) + origin.x;
+  const y = size * 1.5 * r + origin.y;
+  return {x,y};
+}
+function polygonPoints(cx,cy,size,rotation=0){
+  const pts=[];
+  for(let i=0;i<6;i++){
+    const a = Math.PI/180*(60*i - 30 + rotation);
+    pts.push({x: cx + size*Math.cos(a), y: cy + size*Math.sin(a)});
+  }
+  return pts;
+}
+
+/* ---------- Static map arrays (image-based layout) ---------- */
+const PHYSICAL_TYPES = [
+  'ore','sheep','wood',
+  'wheat','brick','sheep','brick',
+  'wheat','wood','desert','wood','ore',
+  'wood','ore','wheat','sheep',
+  'brick','wheat','sheep'
+];
+const PHYSICAL_TOKENS = [
+  10, 2, 9,
+  12, 6, 4, 10,
+  9, 11, null, 3, 8,
+  8, 3, 4, 5,
+  5, 6, 11
+];
+
+/* ---------- Board generation ---------- */
+function generateBoardPhysical(){
+  const coords=[];
+  const R=2;
+  for(let q=-R;q<=R;q++){
+    for(let r=-R;r<=R;r++){
+      if(Math.abs(-q-r)<=R) coords.push({q,r});
+    }
+  }
+  coords.sort((a,b)=>{
+    if(a.r===b.r) return a.q - b.q;
+    return a.r - b.r;
+  });
+
+  let hexes=[];
+  coords.forEach((c,i)=>{
+    const center = axialToPixel(c.q,c.r,60);
+    const pts = polygonPoints(center.x, center.y, 60);
+    const type = PHYSICAL_TYPES[i] || 'wood';
+    const number = PHYSICAL_TOKENS[i] === undefined ? null : PHYSICAL_TOKENS[i];
+    const idh = 'h'+i;
+    hexes.push({id:idh,q:c.q,r:c.r,center,pts,type,number});
+    if(type==='desert') game.board.robberHexId = idh;
+  });
+
+  const nodesMap = new Map();
+  const nodes = [];
+  const edgesSet = new Set();
+  const keyOf = (x,y)=>`${Math.round(x)}_${Math.round(y)}`;
+  hexes.forEach(h=>{
+    for(let i=0;i<6;i++){
+      const p = h.pts[i];
+      const key = keyOf(p.x,p.y);
+      if(!nodesMap.has(key)){
+        const idx = nodes.length;
+        nodesMap.set(key, idx);
+        nodes.push({id:'n'+idx,x:p.x,y:p.y,adjHexes:[],neighbors:[],edges:[],built:null,harbor:null});
+      }
+      const idx = nodesMap.get(key);
+      nodes[idx].adjHexes.push(h.id);
+    }
+    for(let i=0;i<6;i++){
+      const a = nodesMap.get(keyOf(h.pts[i].x,h.pts[i].y));
+      const b = nodesMap.get(keyOf(h.pts[(i+1)%6].x,h.pts[(i+1)%6].y));
+      const key = a<b? `${a}_${b}`: `${b}_${a}`;
+      edgesSet.add(key);
+    }
+  });
+
+  const edges = Array.from(edgesSet).map(k=>{
+    const [a,b]=k.split('_').map(Number);
+    nodes[a].neighbors.push(b);
+    nodes[b].neighbors.push(a);
+    nodes[a].edges.push('e'+a+'_'+b);
+    nodes[b].edges.push('e'+a+'_'+b);
+    return {id:'e'+a+'_'+b,a,b,built:null};
+  });
+
+  game.board.hexes = hexes;
+  game.board.nodes = nodes;
+  game.board.edges = edges;
+
+  // Build harbors (existing data-driven code)
+  const harborPatterns = [
+    {type:'wheat', groups:[['h1','h2'], ['h1']]},
+    {type:'3:1', groups:[['h0'], ['h0']]},
+    {type:'wood', groups:[['h3','h7'], ['h3']]},
+    {type:'brick', groups:[['h7','h12'], ['h12']]},
+    {type:'3:1', groups:[['h16'], ['h16']]},
+    {type:'3:1', groups:[['h17'], ['h17','h18']]},
+    {type:'sheep', groups:[['h15','h18'], ['h15']]},
+    {type:'3:1', groups:[['h11'], ['h11']]},
+    {type:'ore', groups:[['h2','h6'], ['h6']]}
+  ];
+
+  const usedNodeSet = new Set();
+  function findBestNodeForSet(reqSet){
+    const reqStrSet = new Set(reqSet);
+    let exactCandidates = game.board.nodes.map((n,idx)=>({n,idx})).filter(o=>{
+      const s = new Set(o.n.adjHexes);
+      if(o.n.adjHexes.length>3) return false;
+      if(s.size !== reqStrSet.size) return false;
+      for(const r of reqStrSet) if(!s.has(r)) return false;
+      return true;
+    }).filter(o=>!usedNodeSet.has(o.idx));
+    if(exactCandidates.length>0) return exactCandidates[0].idx;
+    let subsetCandidates = game.board.nodes.map((n,idx)=>({n,idx})).filter(o=>{
+      if(usedNodeSet.has(o.idx)) return false;
+      const s = new Set(o.n.adjHexes);
+      for(const r of reqSet) if(!s.has(r)) return false;
+      return (o.n.adjHexes.length <= 2);
+    });
+    if(subsetCandidates.length>0){
+      subsetCandidates.sort((a,b)=> a.n.adjHexes.length - b.n.adjHexes.length);
+      return subsetCandidates[0].idx;
+    }
+    let fallback = game.board.nodes.map((n,idx)=>({n,idx})).filter(o=>{
+      if(usedNodeSet.has(o.idx)) return false;
+      return reqSet.some(r=> o.n.adjHexes.includes(r));
+    });
+    if(fallback.length>0){
+      fallback.sort((a,b)=> a.n.adjHexes.length - b.n.adjHexes.length);
+      return fallback[0].idx;
+    }
+    return null;
+  }
+
+  game.board.harbors = [];
+  const center = {x:500,y:320};
+  const outerRadius = 340;
+  for(const pattern of harborPatterns){
+    for(const group of pattern.groups){
+      const candidateIdx = findBestNodeForSet(group);
+      if(candidateIdx === null) continue;
+      usedNodeSet.add(candidateIdx);
+      const node = game.board.nodes[candidateIdx];
+      const dx = node.x - center.x;
+      const dy = node.y - center.y;
+      const len = Math.hypot(dx,dy) || 1;
+      const ux = dx/len, uy = dy/len;
+      const bx = center.x + ux * outerRadius;
+      const by = center.y + uy * outerRadius;
+      game.board.harbors.push({nodes:[candidateIdx], type: pattern.type, x: bx, y: by});
+      node.harbor = pattern.type;
+    }
+  }
+
+  // --------- UPDATED: merge adjacent harbors with same type into a single badge ----------
+  // Merge if:
+  //  - same type AND their badge positions are physically close (threshold), OR
+  //  - same type AND the nodes they serve are adjacent (i.e. the two harbor lines originate from adjacent board nodes).
+  (function mergeNearbyHarbors(){
+    const merged = [];
+    const threshold = 48; // pixels — fallback proximity merge
+    function nodesAdjacent(nodesA, nodesB){
+      for(const a of nodesA){
+        const na = game.board.nodes[a];
+        if(!na || !na.neighbors) continue;
+        for(const b of nodesB){
+          if(na.neighbors.includes(b)) return true;
+        }
+      }
+      return false;
+    }
+    for(const h of game.board.harbors){
+      let found = false;
+      for(const m of merged){
+        if(m.type === h.type){
+          // if nodes are adjacent (harbor lines come from adjacent nodes), merge
+          if(nodesAdjacent(m.nodes, h.nodes)){
+            // merge unique node indices
+            const set = new Set(m.nodes.concat(h.nodes));
+            m.nodes = Array.from(set);
+            // average badge position weighted by node count
+            m.x = (m.x + h.x)/2;
+            m.y = (m.y + h.y)/2;
+            found = true;
+            break;
+          }
+          // fallback: if badge positions are near each other, merge
+          const dx = m.x - h.x, dy = m.y - h.y;
+          const dist = Math.hypot(dx,dy);
+          if(dist <= threshold){
+            const set = new Set(m.nodes.concat(h.nodes));
+            m.nodes = Array.from(set);
+            m.x = (m.x + h.x)/2;
+            m.y = (m.y + h.y)/2;
+            found = true;
+            break;
+          }
+        }
+      }
+      if(!found) merged.push({nodes: h.nodes.slice(), type: h.type, x: h.x, y: h.y});
+    }
+    game.board.harbors = merged;
+    // ensure nodes still report harbor type
+    game.board.harbors.forEach(h=>{
+      h.nodes.forEach(idx=>{
+        if(game.board.nodes[idx]) game.board.nodes[idx].harbor = h.type;
+      });
+    });
+  })();
+  // -------------------------------------------------------------------------------
+}
+
+/* ---------- Players & deck ---------- */
+function initPlayers(n, overridePlayers){
+  game.players = [];
+  const defaultColors = ['#e63946','#2a9d8f','#f4a261','#264653','#8d99ae','#ff6b6b'];
+  for(let i=0;i<n;i++){
+    const colors = defaultColors;
+    const col = (overridePlayers && overridePlayers[i] && overridePlayers[i].color) ? overridePlayers[i].color : colors[i%colors.length];
+    const name = (overridePlayers && overridePlayers[i] && overridePlayers[i].name) ? overridePlayers[i].name : `Player ${i+1}`;
+    game.players.push({
+      id:i, name:name, color:col,
+      resources:{wood:0,brick:0,sheep:0,wheat:0,ore:0},
+      roads:[],settlements:[],cities:[],vp:0,hiddenVP:0,knights:0,devHand:[],playedKnightsThisTurn:0,
+      _initialResourcesGiven: false, _largest:false, _longest:false
+    });
+  }
+  game.playerCount = n;
+}
+function initDevDeck(){
+  let deck = [].concat(Array(14).fill('knight'),Array(5).fill('vp'),Array(2).fill('road_building'),Array(2).fill('year_of_plenty'),Array(2).fill('monopoly'));
+  game.devDeck = randShuffle(deck);
+}
+
+/* ---------- Rendering ---------- */
+function renderBoard(){
+  const svg = id('boardSvg');
+  svg.innerHTML = '';
+  const ns='http://www.w3.org/2000/svg';
+
+  // defs for clipPaths
+  const defs = document.createElementNS(ns,'defs');
+  svg.appendChild(defs);
+
+  game.board.hexes.forEach(h=>{
+    const g = document.createElementNS(ns,'g');
+    const poly = document.createElementNS(ns,'polygon');
+    poly.setAttribute('points', h.pts.map(p=>`${p.x},${p.y}`).join(' '));
+    poly.setAttribute('fill', tileColor(h.type));
+    poly.setAttribute('stroke','rgba(60,80,80,0.06)');
+    poly.setAttribute('stroke-width','2');
+    g.appendChild(poly);
+
+    // Compute bounding box for this polygon to size the image to fill the hex
+    const xs = h.pts.map(p=>p.x); const ys = h.pts.map(p=>p.y);
+    const minX = Math.min(...xs), minY = Math.min(...ys);
+    const maxX = Math.max(...xs), maxY = Math.max(...ys);
+    const width = maxX - minX; const height = maxY - minY;
+
+    // create unique clipPath for this hex so images fully cover the hex area
+    const clipId = 'clip_'+h.id;
+    const clipPath = document.createElementNS(ns,'clipPath');
+    clipPath.setAttribute('id', clipId);
+    const clipPoly = document.createElementNS(ns,'polygon');
+    clipPoly.setAttribute('points', h.pts.map(p=>`${p.x},${p.y}`).join(' '));
+    clipPath.appendChild(clipPoly);
+    defs.appendChild(clipPath);
+
+    // if tile has an image (including desert.png) draw it centered and clipped to hex; otherwise use emoji
+    if(h.type){
+      const img = document.createElementNS(ns,'image');
+      // size the image to the bounding box (slightly larger to ensure full coverage)
+      const pad = 2;
+      img.setAttribute('href', `${h.type}.webp`);
+      img.setAttribute('x', (minX - pad));
+      img.setAttribute('y', (minY - pad));
+      img.setAttribute('width', (width + pad*2));
+      img.setAttribute('height', (height + pad*2));
+      img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+      img.setAttribute('clip-path', `url(#${clipId})`);
+      img.setAttribute('pointer-events', 'none');
+      g.appendChild(img);
+    } else {
+      // desert emoji fallback (keeps previous behavior)
+      const a = document.createElementNS(ns,'text');
+      a.setAttribute('x', h.center.x); a.setAttribute('y', h.center.y+6);
+      a.setAttribute('text-anchor','middle'); a.setAttribute('font-size','20'); a.textContent = '🪨';
+      g.appendChild(a);
+    }
+
+    // Number token circle & text (circle a little smaller than before)
+    if(h.type !== 'desert'){
+      const cx=h.center.x, cy=h.center.y;
+      const circle = document.createElementNS(ns,'g');
+      const c = document.createElementNS(ns,'circle');
+      // radius reduced from 26 to 20 (smaller as requested)
+      c.setAttribute('cx',cx); c.setAttribute('cy',cy); c.setAttribute('r',20);
+      c.setAttribute('fill','#fff'); c.setAttribute('stroke','#e6f2f1'); c.setAttribute('stroke-width','2');
+      circle.appendChild(c);
+      const t = document.createElementNS(ns,'text');
+      t.setAttribute('x',cx); t.setAttribute('y',cy+4);
+      t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','14'); t.setAttribute('font-weight','700');
+      // make 6 and 8 red
+      if(h.number === 6 || h.number === 8){
+        t.setAttribute('fill','#c62828');
+      } else {
+        t.setAttribute('fill','#062626');
+      }
+      t.textContent = h.number;
+      circle.appendChild(t);
+      g.appendChild(circle);
+    }
+
+    // Robber: move it to sit beside the number (tighter placement)
+    if(game.board.robberHexId === h.id){
+      const r = document.createElementNS(ns,'text');
+      // place robber just right of number, slightly down to fit inside the circle
+      r.setAttribute('x', h.center.x + 18);
+      r.setAttribute('y', h.center.y - 4);
+      r.setAttribute('font-size','20'); r.textContent = '🦹';
+      g.appendChild(r);
+    }
+
+    // Fallback icon if image missing: Small emoji near left-bottom (kept as extra fallback)
+    const ico = document.createElementNS(ns,'text');
+    ico.setAttribute('x', h.center.x - 36); ico.setAttribute('y', h.center.y + 32); ico.setAttribute('font-size','20');
+    ico.textContent = ''; // empty by default
+    g.appendChild(ico);
+
+    poly.style.cursor='pointer';
+    poly.addEventListener('click', ()=>onHexClick(h.id));
+    svg.appendChild(g);
+  });
+
+  game.board.edges.forEach(e=>{
+    const a = game.board.nodes[e.a], b = game.board.nodes[e.b];
+    const line = document.createElementNS(ns,'line');
+    line.setAttribute('x1',a.x); line.setAttribute('y1',a.y); line.setAttribute('x2',b.x); line.setAttribute('y2',b.y);
+    line.setAttribute('stroke','#dfeff0'); line.setAttribute('stroke-width','8'); line.setAttribute('stroke-linecap','round');
+    if(e.built){
+      line.setAttribute('stroke', game.players[e.built.player].color);
+      line.setAttribute('stroke-width','10');
+    }
+    svg.appendChild(line);
+    const hit = document.createElementNS(ns,'line');
+    hit.setAttribute('x1',a.x); hit.setAttribute('y1',a.y); hit.setAttribute('x2',b.x); hit.setAttribute('y2',b.y);
+    hit.setAttribute('stroke','transparent'); hit.setAttribute('stroke-width','20'); hit.style.cursor='pointer';
+    hit.addEventListener('click', ()=>onEdgeClick(e.id));
+    svg.appendChild(hit);
+  });
+
+  game.board.nodes.forEach((n,idx)=>{
+    const g = document.createElementNS(ns,'g');
+    const circle = document.createElementNS(ns,'circle');
+    circle.setAttribute('cx',n.x); circle.setAttribute('cy',n.y); circle.setAttribute('r',10);
+    circle.setAttribute('fill','#fff'); circle.setAttribute('stroke','#e9f1f1'); circle.setAttribute('stroke-width','2');
+    g.appendChild(circle);
+    if(n.built){
+      const t = document.createElementNS(ns,'text');
+      t.setAttribute('x', n.x); t.setAttribute('y', n.y+5);
+      t.setAttribute('text-anchor','middle'); t.setAttribute('font-size', n.built.kind==='city' ? '18' : '14');
+      t.textContent = n.built.kind==='city' ? '🏛️' : '🏠';
+      g.appendChild(t);
+      const ring = document.createElementNS(ns,'circle');
+      ring.setAttribute('cx',n.x); ring.setAttribute('cy',n.y); ring.setAttribute('r',12);
+      ring.setAttribute('fill','none'); ring.setAttribute('stroke', game.players[n.built.player].color); ring.setAttribute('stroke-width','3');
+      g.appendChild(ring);
+    }
+    if(n.harbor){
+      const hm = document.createElementNS(ns,'text');
+      hm.setAttribute('x', n.x + 12);
+      hm.setAttribute('y', n.y - 10);
+      hm.setAttribute('font-size','11');
+      hm.textContent = n.harbor === '3:1' ? '3:1' : `${n.harbor} 2:1`;
+      g.appendChild(hm);
+    }
+    circle.style.cursor='pointer';
+    circle.addEventListener('click', ()=>onNodeClick('n'+idx));
+    svg.appendChild(g);
+  });
+
+  // Draw harbors: connect badge to every node it serves
+  game.board.harbors.forEach(hb=>{
+    const badgeX = hb.x, badgeY = hb.y;
+    hb.nodes.forEach(nodeIdx=>{
+      const node = game.board.nodes[nodeIdx];
+      if(!node) return;
+      const line = document.createElementNS(ns,'line');
+      line.setAttribute('x1', node.x);
+      line.setAttribute('y1', node.y);
+      line.setAttribute('x2', badgeX);
+      line.setAttribute('y2', badgeY);
+      line.setAttribute('stroke','rgba(20,130,120,0.9)');
+      line.setAttribute('stroke-width','2');
+      line.setAttribute('stroke-dasharray','6 4');
+      svg.appendChild(line);
+    });
+    const g = document.createElementNS(ns,'g');
+    const text = document.createElementNS(ns,'text');
+    text.setAttribute('x', badgeX + 6);
+    text.setAttribute('y', badgeY + 6);
+    text.setAttribute('font-size','12');
+    text.setAttribute('font-weight','700');
+    text.setAttribute('text-anchor','start');
+    text.setAttribute('alignment-baseline','middle');
+    text.textContent = (hb.type === '3:1') ? '3:1' : `${hb.type} 2:1`;
+    const approxWidth = Math.max(46, 10 + text.textContent.length * 7);
+    const rect = document.createElementNS(ns,'rect');
+    rect.setAttribute('x', badgeX);
+    rect.setAttribute('y', badgeY - 8);
+    rect.setAttribute('rx', 8);
+    rect.setAttribute('ry', 8);
+    rect.setAttribute('width', approxWidth);
+    rect.setAttribute('height', 20);
+    rect.setAttribute('fill','rgba(255,255,255,0.95)');
+    rect.setAttribute('stroke','rgba(20,130,120,0.18)');
+    rect.setAttribute('stroke-width','1');
+    g.appendChild(rect);
+    g.appendChild(text);
+    svg.appendChild(g);
+  });
+
+  id('turnLabel').textContent = game.players[game.currentPlayer].name;
+  id('currentPlayerName').textContent = game.players[game.currentPlayer].name;
+  updatePlayerPanels();
+}
+
+/* tile color helper */
+function tileColor(type){
+  switch(type){
+    case 'wood': return '#e6faf3';
+    case 'brick': return '#fff4ef';
+    case 'sheep': return '#effff1';
+    case 'wheat': return '#fffaf0';
+    case 'ore': return '#f2f6f9';
+    case 'desert': return '#efe7d9';
+    default: return '#fff';
+  }
+}
+
+/* ---------- Build & highlights ---------- */
+let buildMode = null;
+let lastSetupNode = null;
+
+/* ---------- FIX: helper functions for road/connection checks ---------- */
+/* Determines if a given edge is a legal place for playerIdx to build a road */
+function canBuildRoadAtEdge(edgeObj, playerIdx){
+  if(!edgeObj) return false;
+  if(edgeObj.built) return false;
+  const aNode = game.board.nodes[edgeObj.a];
+  const bNode = game.board.nodes[edgeObj.b];
+  // if either adjacent node is occupied by this player's settlement/city => allowed
+  if(aNode && aNode.built && aNode.built.player === playerIdx) return true;
+  if(bNode && bNode.built && bNode.built.player === playerIdx) return true;
+  // if any adjacent edge to a or b is built by this player => allowed
+  for(const eId of (aNode.edges || [])){
+    const ed = game.board.edges.find(x => x.id === eId);
+    if(ed && ed.built && ed.built.player === playerIdx) return true;
+  }
+  for(const eId of (bNode.edges || [])){
+    const ed = game.board.edges.find(x => x.id === eId);
+    if(ed && ed.built && ed.built.player === playerIdx) return true;
+  }
+  return false;
+}
+
+/* Returns true if node has an adjacent road owned by playerIdx or is itself owned by playerIdx */
+function nodeHasAdjacentOwnRoad(nodeIdx, playerIdx){
+  const node = game.board.nodes[nodeIdx];
+  if(!node) return false;
+  if(node.built && node.built.player === playerIdx) return true;
+  for(const eId of (node.edges || [])){
+    const ed = game.board.edges.find(x => x.id === eId);
+    if(ed && ed.built && ed.built.player === playerIdx) return true;
+  }
+  return false;
+}
+/* ---------- END FIX ---------- */
+
+function openModal(){ id('modal').style.display='flex'; id('buildHelp').textContent = 'Choose a build action then click on the board to place.'; }
+function closeModal(){ id('modal').style.display = 'none'; buildMode=null; clearHighlights(); renderBoard(); }
+function startBuild(mode){
+  buildMode = mode;
+  id('buildHelp').textContent = `Click a board location to place a ${mode}.`;
+  closeModal();
+  autoCenterAction('Build mode', 'Click a highlighted spot to place your building. Highlights appear now.', 1600);
+  highlightBuildOptions();
+}
+
+/* Confirm build flow */
+function askConfirmBuild(title, text, callback){
+  id('confirmBuildTitle').textContent = title;
+  id('confirmBuildText').textContent = text;
+  id('confirmBuildModal').style.display = 'flex';
+  _confirmCallback = callback;
+  id('confirmBuildModal').dataset.pending = '1';
+}
+function cancelConfirmBuild(){
+  id('confirmBuildModal').style.display = 'none';
+  _confirmCallback = null;
+  id('confirmBuildModal').dataset.pending = '';
+}
+function okConfirmBuild(){
+  id('confirmBuildModal').style.display = 'none';
+  if(typeof _confirmCallback === 'function') { _confirmCallback(); }
+  _confirmCallback = null;
+  id('confirmBuildModal').dataset.pending = '';
+}
+
+function highlightBuildOptions(){
+  clearHighlights();
+  if(buildMode==='settlement' || buildMode==='city'){
+    game.board.nodes.forEach((n,idx)=>{
+      if(buildMode==='settlement' && !n.built){
+        let ok=true;
+        for(const nb of n.neighbors){ if(game.board.nodes[nb].built) ok=false; }
+        if(game.phase==='playing'){
+          const me = game.currentPlayer;
+          let connected=false;
+          for(const eId of n.edges||[]){
+            const e = game.board.edges.find(x=>x.id===eId);
+            if(e && e.built && e.built.player===me) connected=true;
+          }
+          if(!connected) ok=false;
+        }
+        if(ok) addNodeHighlight(idx);
+      } else if(buildMode==='city' && n.built && n.built.player===game.currentPlayer && n.built.kind==='settlement'){
+        addNodeHighlight(idx);
+      }
+    });
+  } else if(buildMode==='road'){
+    const me = game.currentPlayer;
+    game.board.edges.forEach(e=>{
+      if(canBuildRoadAtEdge(e, me)) addEdgeHighlight(e.id);
+    });
+  }
+}
+function addNodeHighlight(idx){
+  const node = game.board.nodes[idx];
+  const el = document.createElement('div');
+  el.className = 'node-highlight';
+  el.style.position='absolute';
+  el.style.left = (node.x - 18) + 'px';
+  el.style.top = (node.y - 18) + 'px';
+  el.style.width = '36px'; el.style.height='36px'; el.style.borderRadius='18px';
+  el.style.border = `3px dashed rgba(20,130,120,0.24)`;
+  el.style.pointerEvents='none';
+  el.id = 'nodehl_'+idx;
+  id('boardWrap').appendChild(el);
+}
+function addEdgeHighlight(eid){
+  const e = game.board.edges.find(x=>x.id===eid);
+  const a = game.board.nodes[e.a], b = game.board.nodes[e.b];
+  const el = document.createElement('div');
+  el.className='node-highlight';
+  const mx = (a.x + b.x)/2, my = (a.y + b.y)/2;
+  const angle = Math.atan2(b.y - a.y, b.x - a.x) * 180/Math.PI;
+  el.style.position='absolute';
+  el.style.left = (mx - 22) + 'px';
+  el.style.top = (my - 10) + 'px';
+  el.style.width='44px'; el.style.height='20px'; el.style.borderRadius='10px';
+  el.style.border = `3px dashed rgba(20,130,120,0.24)`;
+  el.style.transform = `rotate(${angle}deg)`;
+  el.style.pointerEvents='none';
+  el.id = 'edgehl_'+eid;
+  id('boardWrap').appendChild(el);
+}
+function clearHighlights(){ const wrap = id('boardWrap'); Array.from(wrap.querySelectorAll('[id^="nodehl_"], [id^="edgehl_"]')).forEach(n=>n.remove()); }
+
+/* ---------- Board clicks ---------- */
+function onNodeClick(nodeId){
+  const idx = Number(nodeId.slice(1));
+  const node = game.board.nodes[idx];
+  if(game.phase==='setup'){
+    if(node.built){ alert('Already occupied'); return; }
+    for(const nb of node.neighbors){ if(game.board.nodes[nb].built){ alert('Too close to another settlement'); return; } }
+    node.built = {player: game.currentPlayer, kind:'settlement'};
+    const p = game.players[game.currentPlayer];
+    p.settlements.push(idx); p.vp += 1;
+    log(`${p.name} placed a starting settlement.`);
+    lastSetupNode = idx;
+    showCenterMessage('Place initial road','Now click an adjacent edge to place your starting road.',true,'Okay',()=>{},true);
+    renderBoard();
+    return;
+  }
+
+  if(game.phase === 'playing' && game.currentPlayer !== undefined){
+    const p = game.players[game.currentPlayer];
+    if(!node.built){
+      for(const nb of node.neighbors){ if(game.board.nodes[nb].built) { alert('Too close to another settlement'); return; } }
+      const connected = nodeHasAdjacentOwnRoad(idx, game.currentPlayer);
+      if(!connected){
+        alert('Settlement must connect to your road/network.');
+        return;
+      }
+      // ask confirm before placing
+      if(!hasCost(p,COSTS.settlement)){ alert('Not enough resources'); return; }
+      askConfirmBuild('Place Settlement','Are you sure you want to place a settlement here? (Cost: Brick+Wood+Wheat+Sheep)', ()=> {
+        attemptBuildSettlementConfirmed(idx);
+      });
+      return;
+    } else {
+      if(node.built.player === game.currentPlayer && node.built.kind === 'settlement'){
+        // confirm upgrade
+        if(!hasCost(game.players[game.currentPlayer], COSTS.city)) { alert('Not enough resources'); return; }
+        askConfirmBuild('Upgrade to City','Are you sure you want to upgrade this settlement to a city? (Cost: 3 Ore + 2 Wheat)', ()=> {
+          attemptBuildCityConfirmed(idx);
+        });
+        return;
+      }
+      const owner = node.built ? `${game.players[node.built.player].name} (${node.built.kind})` : '—';
+      let harborTxt = node.harbor ? `Harbor: ${node.harbor}` : 'No harbor';
+      showCenterMessage('Node Info',`Owner: ${owner}\n${harborTxt}\nAdjacent tiles: ${node.adjHexes.join(', ')}`,true,'Close',()=>{},true);
+      return;
+    }
+  }
+
+  if(buildMode === 'settlement') {
+    // build mode -> confirm then place
+    attemptBuildSettlementFromModal(idx);
+  } else if(buildMode === 'city') {
+    attemptBuildCityFromModal(idx);
+  } else {
+    const owner = node.built ? `${game.players[node.built.player].name} (${node.built.kind})` : '—';
+    let harborTxt = node.harbor ? `Harbor: ${node.harbor}` : 'No harbor';
+    showCenterMessage('Node Info',`Owner: ${owner}\n${harborTxt}\nAdjacent tiles: ${node.adjHexes.join(', ')}`,true,'Close',()=>{},true);
+  }
+}
+function onEdgeClick(edgeId){
+  const e = game.board.edges.find(x=>x.id===edgeId);
+  if(game.phase==='setup' && lastSetupNode !== null){
+    if(!(e.a===lastSetupNode || e.b===lastSetupNode)){ alert('Road must touch your last settlement'); return; }
+    e.built = {player: game.currentPlayer};
+    const p = game.players[game.currentPlayer];
+    p.roads.push(edgeId);
+    log(`${p.name} placed starting road.`);
+    lastSetupNode = null;
+    game.setupIndex++;
+    nextSetupTurn();
+    renderBoard();
+    return;
+  }
+
+  if(game.phase === 'playing' && buildMode !== 'road'){
+    const me = game.currentPlayer;
+    if(canBuildRoadAtEdge(e, me)){
+      // confirm placement with cost check
+      if(!hasCost(game.players[me], COSTS.road)){ alert('Not enough resources'); return; }
+      askConfirmBuild('Place Road','Are you sure you want to place a road here? (Cost: Brick + Wood)', ()=> {
+        attemptPlaceRoadConfirmed(edgeId);
+      });
+      return;
+    }
+  }
+
+  if(buildMode === 'road'){
+    if(specialRoadBuild.active && specialRoadBuild.remaining>0){
+      const eObj = e;
+      if(eObj.built){ alert('Already occupied'); return; }
+      const a = game.board.nodes[e.a], b = game.board.nodes[e.b];
+      let ok=false; const p = game.currentPlayer;
+      if(a.built && a.built.player===p) ok=true;
+      if(b.built && b.built.player===p) ok=true;
+      for(const edgeId of a.edges||[]){ const ed = game.board.edges.find(x=>x.id===edgeId); if(ed.built && ed.built.player===p) ok=true; }
+      for(const edgeId of b.edges||[]){ const ed = game.board.edges.find(x=>x.id===edgeId); if(ed.built && ed.built.player===p) ok=true; }
+      if(!ok){ alert('Road must connect to your network'); return; }
+      eObj.built = {player:p};
+      game.players[p].roads.push(eObj.id);
+      specialRoadBuild.remaining--;
+      log(`${game.players[p].name} placed a free road (Road Building). Remaining: ${specialRoadBuild.remaining}`);
+      // update longest road after placing
+      updateLongestRoads();
+      if(specialRoadBuild.remaining<=0){ specialRoadBuild.active=false; clearHighlights(); renderBoard(); updatePlayerPanels(); } else { highlightBuildOptions(); renderBoard(); updatePlayerPanels(); }
+      return;
+    } else {
+      attemptPlaceRoad(edgeId);
+    }
+  }
+}
+
+/* ---------- Setup flow & batch initial resources ---------- */
+function openSetupModal(){
+  const sel = id('setupPlayerCount');
+  sel.innerHTML = '';
+  for(let v=2; v<=6; v++){ const o = document.createElement('option'); o.value=v; o.textContent=v; if(v===game.playerCount) o.selected=true; sel.appendChild(o); }
+  id('setupPlayersArea').innerHTML = '';
+  function buildFields(count){
+    const area = id('setupPlayersArea');
+    area.innerHTML = '';
+    const defaultColors = ['#e63946','#2a9d8f','#f4a261','#264653','#8d99ae','#ff6b6b'];
+    for(let i=0;i<count;i++){
+      const row = document.createElement('div');
+      row.className = 'player-list-row';
+      /* CHANGED: use a real color-picker input (type="color") instead of the hex prompt */
+      row.innerHTML = `<div style="display:flex;gap:8px;align-items:center">
+        <div style="width:8px"></div>
+        <div style="display:flex;flex-direction:column">
+          <input id="setup_name_${i}" placeholder="Player ${i+1}" style="padding:6px;border-radius:6px;border:1px solid #eee;width:220px"/>
+          <div style="margin-top:6px" class="muted">Color <input id="setup_color_${i}" type="color" value="${defaultColors[i%defaultColors.length]}" style="width:46px;height:28px;border-radius:6px;border:1px solid #ddd;vertical-align:middle"></div>
+        </div>
+      </div>`;
+      area.appendChild(row);
+      const nameInput = row.querySelector(`#setup_name_${i}`);
+      nameInput.value = `Player ${i+1}`;
+    }
+  }
+  sel.onchange = ()=> buildFields(Number(sel.value));
+  buildFields(Number(sel.value));
+  id('setupModal').style.display = 'flex';
+}
+function closeSetupModal(){ id('setupModal').style.display = 'none'; }
+
+function randomizeColors(){
+  const area = id('setupPlayersArea');
+  const inputs = area.querySelectorAll('[id^="setup_color_"]');
+  inputs.forEach(inp=>{
+    const c = '#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0');
+    inp.value = c;
+  });
+}
+
+function startGameFromSetup(){
+  const count = Number(id('setupPlayerCount').value);
+  const setupPlayers = [];
+  for(let i=0;i<count;i++){
+    const name = id(`setup_name_${i}`).value || `Player ${i+1}`;
+    const color = id(`setup_color_${i}`).value || '#888888';
+    setupPlayers.push({name, color});
+  }
+  initPlayers(count, setupPlayers);
+  generateBoardPhysical();
+  initDevDeck();
+  // randomly choose starting player
+  game.currentPlayer = Math.floor(Math.random()*game.playerCount);
+  game.phase='setup';
+  game.setupOrder = [];
+  for(let i=0;i<game.playerCount;i++) game.setupOrder.push(i);
+  for(let i=game.playerCount-1;i>=0;i--) game.setupOrder.push(i);
+  game.setupIndex = 0;
+  game.board.nodes.forEach(n=>{ n.built=null; }); game.board.edges.forEach(e=>{ e.built=null; });
+  game.players.forEach(p=>{ p.resources={wood:0,brick:0,sheep:0,wheat:0,ore:0}; p.roads=[]; p.settlements=[]; p.cities=[]; p.vp=0; p.hiddenVP=0; p.knights=0; p.devHand=[]; p._initialResourcesGiven=false; p._largest=false; p._longest=false; });
+  log('New game — initial placement begins. Random starting player chosen.');
+  nextSetupTurn();
+  renderBoard();
+  id('bestRate').textContent = 'Active player best bank rate: 4:1 (no harbors yet)';
+  closeSetupModal();
+}
+
+/* startNewGame kept for compatibility but now triggers setup modal */
+function startNewGame(){
+  openSetupModal();
+}
+
+function nextSetupTurn(){
+  if(game.setupIndex >= game.setupOrder.length){
+    game.phase='playing';
+    const lastPlayer = game.setupOrder[game.setupIndex - 1];
+    game.currentPlayer = lastPlayer;
+    log('Setup complete. Game begins. ' + game.players[game.currentPlayer].name + ' takes first turn.');
+    awardAllInitialPlacementResources();
+    renderBoard();
+    return;
+  }
+  const p = game.setupOrder[game.setupIndex];
+  game.currentPlayer = p;
+  log(`${game.players[p].name}: place settlement.`);
+  renderBoard();
+}
+
+/* Award resources for BOTH initial settlements of every player */
+function awardAllInitialPlacementResources(){
+  game.players.forEach(p=>{
+    if(p._initialResourcesGiven) return;
+    (p.settlements || []).forEach(sIdx=>{
+      const node = game.board.nodes[sIdx];
+      if(!node) return;
+      node.adjHexes.forEach(hid=>{
+        const hex = game.board.hexes.find(x=>x.id===hid);
+        if(hex && hex.type !== 'desert'){
+          p.resources[hex.type] = (p.resources[hex.type]||0) + 1;
+          log(`${p.name} receives 1 ${hex.type} from initial placement (settlement at n${sIdx}).`);
+          animateResourceGain(hex.type, hex.center.x, hex.center.y, 1);
+        }
+      });
+    });
+    p._initialResourcesGiven = true;
+  });
+  updatePlayerPanels();
+}
+
+/* ---------- Dice / production / discard ---------- */
+function rollDiceAction(){
+  if(game.phase !== 'playing'){ alert('Finish initial placement first.'); return; }
+  const p = game.players[game.currentPlayer];
+  if(p.rolledThisTurn){ alert('You already rolled this turn.'); return; }
+  const diceBox = id('diceBox');
+  diceBox.classList.add('rolling');
+  diceBox.textContent = '';
+  setTimeout(()=>{
+    diceBox.classList.remove('rolling');
+    const d1 = 1 + Math.floor(Math.random()*6);
+    const d2 = 1 + Math.floor(Math.random()*6);
+    game.dice = [d1,d2];
+    const total = d1 + d2;
+    diceBox.textContent = `${d1}+${d2}`;
+    log(`${p.name} rolled ${total}.`);
+    if(total === 7){
+      prepareDiscardsThen(()=> {
+        moveRobberMode = true;
+        showCenterMessage('Move Robber','You rolled a 7 — click any tile to move the robber. Then steal a card from a player adjacent (if present).',true,'OK',()=>{},true);
+      });
+    } else {
+      // distribute resources and show per-player gain animation
+      distributeResources(total);
+    }
+    p.rolledThisTurn = true;
+  }, 700);
+}
+
+/* Modified: compute per-player gains and show animation */
+function distributeResources(total){
+  const hexes = game.board.hexes.filter(h=>h.number === total);
+  if(hexes.length===0) { log('No hexes produce this roll'); return; }
+
+  // prepare gains structure: array indexed by player id with resource counts
+  const gains = [];
+  for(let i=0;i<game.playerCount;i++) gains[i] = {wood:0,brick:0,sheep:0,wheat:0,ore:0};
+
+  hexes.forEach(h=>{
+    if(game.board.robberHexId === h.id){ log(`Tile ${h.id} blocked by robber.`); return; }
+    game.board.nodes.forEach(n=>{
+      if(n.adjHexes.includes(h.id) && n.built){
+        const owner = game.players[n.built.player];
+        const kind = n.built.kind;
+        const amount = kind==='city'?2:1;
+        owner.resources[h.type] = (owner.resources[h.type]||0) + amount;
+        // record gains
+        gains[owner.id][h.type] = (gains[owner.id][h.type] || 0) + amount;
+        animateResourceGain(h.type, h.center.x, h.center.y, amount);
+        log(`${owner.name} gets ${amount} ${h.type}.`);
+      }
+    });
+  });
+
+  updatePlayerPanels();
+
+  // build simplified per-player display object only for players who gained something
+  const compactGains = {};
+  for(let i=0;i<gains.length;i++){
+    const g = gains[i];
+    const sum = (g.wood||0) + (g.brick||0) + (g.sheep||0) + (g.wheat||0) + (g.ore||0);
+    if(sum > 0) compactGains[i] = g;
+  }
+
+  // show the new animation summarizing gains beside each player's row
+  showResourceGainsAnimation(compactGains);
+}
+
+/* ---------- Discard modal logic ---------- */
+function prepareDiscardsThen(callback){
+  waitingDiscardQueue = [];
+  game.players.forEach((p,idx)=>{
+    const tot = Object.values(p.resources).reduce((a,b)=>a+b,0);
+    if(tot > 7) waitingDiscardQueue.push(idx);
+  });
+  if(waitingDiscardQueue.length === 0){ callback(); return; }
+  discardResolveCallback = callback;
+  processNextDiscard();
+}
+function processNextDiscard(){
+  if(waitingDiscardQueue.length === 0){
+    if(discardResolveCallback) discardResolveCallback();
+    discardResolveCallback = null;
+    return;
+  }
+  const pid = waitingDiscardQueue.shift();
+  openDiscardForPlayer(pid);
+}
+function openDiscardForPlayer(pid){
+  const player = game.players[pid];
+  const tot = Object.values(player.resources).reduce((a,b)=>a+b,0);
+  const must = Math.floor(tot/2);
+  id('discardInstruction').textContent = `${player.name} must discard ${must} card(s) (total hand ${tot}). Use the inputs below and submit.`;
+  // set inputs to zero and set max
+  id('dWood').value = 0; id('dWood').max = player.resources.wood || 0;
+  id('dBrick').value = 0; id('dBrick').max = player.resources.brick || 0;
+  id('dSheep').value = 0; id('dSheep').max = player.resources.sheep || 0;
+  id('dWheat').value = 0; id('dWheat').max = player.resources.wheat || 0;
+  id('dOre').value = 0; id('dOre').max = player.resources.ore || 0;
+
+  // Update visible counts next to each input (as requested)
+  // We'll put/update a span.discard-count next to each input
+  function setCountSpan(inputId, count){
+    const inp = id(inputId);
+    if(!inp) return;
+    // remove previous span if exists
+    const existing = inp.parentElement.querySelector('.discard-count');
+    if(existing) existing.remove();
+    const span = document.createElement('span');
+    span.className = 'discard-count';
+    span.textContent = `(have: ${count})`;
+    inp.parentElement.appendChild(span);
+  }
+  setCountSpan('dWood', player.resources.wood || 0);
+  setCountSpan('dBrick', player.resources.brick || 0);
+  setCountSpan('dSheep', player.resources.sheep || 0);
+  setCountSpan('dWheat', player.resources.wheat || 0);
+  setCountSpan('dOre', player.resources.ore || 0);
+
+  id('discardModal').style.display = 'flex';
+  id('discardModal').dataset.pid = pid;
+  id('discardModal').dataset.must = must;
+}
+function cancelDiscard(){ alert('You must discard when required. Please enter cards to discard.'); }
+function submitDiscard(){
+  const pid = Number(id('discardModal').dataset.pid);
+  const must = Number(id('discardModal').dataset.must);
+  const p = game.players[pid];
+  const w = Number(id('dWood').value) || 0;
+  const b = Number(id('dBrick').value) || 0;
+  const s = Number(id('dSheep').value) || 0;
+  const gr = Number(id('dWheat').value) || 0;
+  const o = Number(id('dOre').value) || 0;
+  const sum = w+b+s+gr+o;
+  if(w > (p.resources.wood||0) || b > (p.resources.brick||0) || s > (p.resources.sheep||0) || gr > (p.resources.wheat||0) || o > (p.resources.ore||0)){
+    alert('You specified more of a resource than you have.');
+    return;
+  }
+  if(sum !== must){ alert(`You must choose exactly ${must} cards to discard (you chose ${sum}).`); return; }
+  p.resources.wood -= w; p.resources.brick -= b; p.resources.sheep -= s; p.resources.wheat -= gr; p.resources.ore -= o;
+  log(`${p.name} discarded ${w} wood, ${b} brick, ${s} sheep, ${gr} wheat, ${o} ore.`);
+  id('discardModal').style.display = 'none';
+  updatePlayerPanels();
+  setTimeout(()=> processNextDiscard(), 220);
+}
+
+/* ---------- Move robber & steal ---------- */
+function onHexClick(hexId){
+  const h = game.board.hexes.find(x=>x.id===hexId);
+  if(!h) return;
+  if(moveRobberMode){
+    game.board.robberHexId = h.id;
+    moveRobberMode = false;
+    log(`${game.players[game.currentPlayer].name} moved robber to ${h.id}.`);
+    renderBoard();
+    const victims = new Set();
+    game.board.nodes.forEach(n=>{
+      if(n.adjHexes.includes(h.id) && n.built && n.built.player !== game.currentPlayer) victims.add(n.built.player);
+    });
+    if(victims.size > 0) openStealModal(h.id, Array.from(victims));
+    else log('No adjacent opponent buildings to steal from.');
+    return;
+  }
+  const tileInfo = `${h.type}${h.number?(' • '+h.number):''}`;
+  showCenterMessage('Tile',`Tile ${hexId}\n${tileInfo}`,true,'Close',()=>{},true);
+}
+
+function openStealModal(hexId, victimIds){
+  const overlay = document.createElement('div');
+  overlay.style.position='fixed'; overlay.style.inset='0'; overlay.style.background='rgba(0,0,0,0.35)'; overlay.style.display='flex'; overlay.style.alignItems='center'; overlay.style.justifyContent='center'; overlay.id='stealOverlay';
+  const box = document.createElement('div');
+  box.style.background='white'; box.style.padding='14px'; box.style.borderRadius='12px'; box.style.minWidth='320px'; box.style.maxWidth='90%';
+  box.innerHTML = `<div style="font-weight:900;margin-bottom:8px">Steal a resource</div><div style="margin-bottom:8px" id="stealText">Choose a player to steal from:</div>`;
+  const sel = document.createElement('select'); sel.style.padding='8px'; sel.style.border='1px solid #e8f0ef'; sel.style.borderRadius='8px';
+  sel.id='stealVictim';
+  const defaultOpt = document.createElement('option'); defaultOpt.value=''; defaultOpt.textContent='Select player'; sel.appendChild(defaultOpt);
+  victimIds.forEach(v=>{
+    const o = document.createElement('option'); o.value = v; o.textContent = `${game.players[v].name} (P${v+1})`; sel.appendChild(o);
+  });
+  box.appendChild(sel);
+  const resSel = document.createElement('select'); resSel.style.padding='8px'; resSel.style.border='1px solid #e8f0ef'; resSel.style.borderRadius='8px'; resSel.style.marginTop='8px';
+  resSel.id='stealResource';
+  const defaultOpt2 = document.createElement('option'); defaultOpt2.value=''; defaultOpt2.textContent='Random / choose resource (choose to specify)';
+  resSel.appendChild(defaultOpt2);
+  ['wood','brick','sheep','wheat','ore'].forEach(r=>{ const o=document.createElement('option'); o.value=r; o.textContent=`${r}`; resSel.appendChild(o); });
+  box.appendChild(resSel);
+  const btnRow = document.createElement('div'); btnRow.style.display='flex'; btnRow.style.justifyContent='flex-end'; btnRow.style.gap='8px'; btnRow.style.marginTop='12px';
+  const cancel = document.createElement('button'); cancel.className='btn-ghost'; cancel.textContent='Cancel';
+  const ok = document.createElement('button'); ok.className='small'; ok.textContent='Steal';
+  btnRow.appendChild(cancel); btnRow.appendChild(ok);
+  box.appendChild(btnRow);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  cancel.onclick = ()=>{ overlay.remove(); log('No steal performed.'); };
+  ok.onclick = ()=>{
+    const victimVal = sel.value;
+    if(!victimVal){ alert('Select a player to steal from'); return; }
+    const victim = game.players[Number(victimVal)];
+    const chosenRes = resSel.value;
+    if(chosenRes){
+      if((victim.resources[chosenRes]||0) > 0){
+        victim.resources[chosenRes]--; game.players[game.currentPlayer].resources[chosenRes] = (game.players[game.currentPlayer].resources[chosenRes]||0)+1;
+        log(`${game.players[game.currentPlayer].name} stole 1 ${chosenRes} from ${victim.name}.`);
+        animateResourceGain(chosenRes, game.board.hexes.find(x=>x.id===hexId).center.x, game.board.hexes.find(x=>x.id===hexId).center.y, 1);
+        overlay.remove(); renderBoard(); updatePlayerPanels();
+        return;
+      } else {
+        alert(`${victim.name} has no ${chosenRes}.`);
+        return;
+      }
+    } else {
+      const avail = Object.entries(victim.resources).filter(([k,v])=>v>0);
+      if(avail.length===0){ alert(`${victim.name} has no resources`); overlay.remove(); return; }
+      const res = avail[0][0];
+      victim.resources[res]--; game.players[game.currentPlayer].resources[res] = (game.players[game.currentPlayer].resources[res]||0) + 1;
+      log(`${game.players[game.currentPlayer].name} stole 1 ${res} from ${victim.name}.`);
+      animateResourceGain(res, game.board.hexes.find(x=>x.id===hexId).center.x, game.board.hexes.find(x=>x.id===hexId).center.y, 1);
+      overlay.remove(); renderBoard(); updatePlayerPanels();
+      return;
+    }
+  };
+}
+
+/* ---------- Building functions (with confirmation wrappers) ---------- */
+function attemptBuildSettlementFromModal(idx){
+  // used when clicking while in build mode (keeps previous checks)
+  const node = game.board.nodes[idx];
+  if(node.built){ alert('Occupied'); return; }
+  for(const nb of node.neighbors){ if(game.board.nodes[nb].built) { alert('Too close to another settlement'); return; } }
+  // require connection unless setup
+  if(game.phase === 'playing'){
+    const me = game.currentPlayer;
+    let ok=false;
+    for(const eId of node.edges||[]){
+      const e = game.board.edges.find(x=>x.id===eId);
+      if(e && e.built && e.built.player===me) ok=true;
+    }
+    if(!ok){ alert('Must connect to your road or building'); return; }
+    if(!hasCost(game.players[me], COSTS.settlement)){ alert('Not enough resources'); return; }
+    askConfirmBuild('Place Settlement','Are you sure you want to place a settlement here? (Cost: Brick+Wood+Wheat+Sheep)', ()=> {
+      attemptBuildSettlementConfirmed(idx);
+    });
+  } else {
+    attemptBuildSettlement(idx);
+  }
+}
+function attemptBuildSettlementConfirmed(idx){
+  const node = game.board.nodes[idx];
+  const p = game.players[game.currentPlayer];
+  if(node.built){ alert('Occupied'); return; }
+  for(const nb of node.neighbors){ if(game.board.nodes[nb].built) { alert('Too close to another settlement'); return; } }
+  if(game.phase==='playing'){
+    if(!hasCost(p,COSTS.settlement)){ alert('Not enough resources'); return; }
+    payCost(p,COSTS.settlement);
+  }
+  node.built = {player:p.id, kind:'settlement'};
+  p.settlements.push(idx); p.vp += 1;
+  log(`${p.name} built a settlement.`);
+  // check for win (visible VP changed this turn)
+  checkForWinDuringTurn(game.currentPlayer);
+  clearBuildMode();
+  updatePlayerPanels(); renderBoard();
+}
+function attemptBuildCityFromModal(idx){
+  // buildMode triggered city
+  const node = game.board.nodes[idx];
+  if(!node.built || node.built.player !== game.currentPlayer || node.built.kind !== 'settlement'){ alert('Can only upgrade your settlement'); return; }
+  if(!hasCost(game.players[game.currentPlayer],COSTS.city)){ alert('Not enough resources'); return; }
+  askConfirmBuild('Upgrade to City','Are you sure you want to upgrade this settlement to a city? (Cost: 3 Ore + 2 Wheat)', ()=> {
+    attemptBuildCityConfirmed(idx);
+  });
+}
+function attemptBuildCityConfirmed(idx){
+  const node = game.board.nodes[idx];
+  const p = game.players[game.currentPlayer];
+  if(!node.built || node.built.player !== p.id || node.built.kind !== 'settlement'){ alert('Can only upgrade your settlement'); return; }
+  if(!hasCost(p,COSTS.city)){ alert('Not enough resources'); return; }
+  payCost(p,COSTS.city);
+  node.built.kind = 'city';
+  p.settlements = p.settlements.filter(x=>x!==idx); p.cities.push(idx);
+  p.vp += 1;
+  log(`${p.name} upgraded to a city.`);
+  // check for win (visible VP changed this turn)
+  checkForWinDuringTurn(game.currentPlayer);
+  clearBuildMode(); renderBoard(); updatePlayerPanels();
+}
+function attemptPlaceRoad(edgeId){
+  // direct immediate road placement (without buildMode confirm)
+  const e = game.board.edges.find(x=>x.id===edgeId);
+  const p = game.players[game.currentPlayer];
+  if(e.built){ alert('Already'); return; }
+  let ok=false;
+  const a = game.board.nodes[e.a], b = game.board.nodes[e.b];
+  if(a.built && a.built.player===p.id) ok=true;
+  if(b.built && b.built.player===p.id) ok=true;
+  for(const edgeId of a.edges||[]){ const ed = game.board.edges.find(x=>x.id===edgeId); if(ed.built && ed.built.player===p.id) ok=true; }
+  for(const edgeId of b.edges||[]){ const ed = game.board.edges.find(x=>x.id===edgeId); if(ed.built && ed.built.player===p.id) ok=true; }
+  if(!ok){ alert('Road must connect to you'); return; }
+  if(!hasCost(p,COSTS.road)){ alert('Not enough resources'); return; }
+  payCost(p,COSTS.road);
+  e.built = {player:p.id}; p.roads.push(e.id);
+  log(`${p.name} built a road.`);
+  // update longest road after placing
+  updateLongestRoads();
+  clearBuildMode(); renderBoard(); updatePlayerPanels();
+}
+function attemptPlaceRoadConfirmed(edgeId){
+  const e = game.board.edges.find(x=>x.id===edgeId);
+  const p = game.players[game.currentPlayer];
+  if(e.built){ alert('Already'); return; }
+  let ok=false;
+  const a = game.board.nodes[e.a], b = game.board.nodes[e.b];
+  if(a.built && a.built.player===p.id) ok=true;
+  if(b.built && b.built.player===p.id) ok=true;
+  for(const edgeId of a.edges||[]){ const ed = game.board.edges.find(x=>x.id===edgeId); if(ed.built && ed.built.player===p.id) ok=true; }
+  for(const edgeId of b.edges||[]){ const ed = game.board.edges.find(x=>x.id===edgeId); if(ed.built && ed.built.player===p.id) ok=true; }
+  if(!ok){ alert('Road must connect to you'); return; }
+  if(!hasCost(p,COSTS.road)){ alert('Not enough resources'); return; }
+  payCost(p,COSTS.road);
+  e.built = {player:p.id}; p.roads.push(e.id);
+  log(`${p.name} built a road.`);
+  // update longest road after placing
+  updateLongestRoads();
+  clearBuildMode(); renderBoard(); updatePlayerPanels();
+}
+const COSTS = {road:{brick:1,wood:1}, settlement:{brick:1,wood:1,wheat:1,sheep:1}, city:{ore:3,wheat:2}, dev:{ore:1,wheat:1,sheep:1}};
+function hasCost(player,cost){ for(const k in cost) if((player.resources[k]||0) < cost[k]) return false; return true; }
+function payCost(player,cost){ for(const k in cost) player.resources[k] -= cost[k]; }
+function clearBuildMode(){ buildMode=null; clearHighlights(); id('buildHelp').textContent=''; }
+
+/* ---------- Trade logic ---------- */
+function getBestBankRateForPlayer(pid, resource){
+  const p = game.players[pid];
+  let best = 4;
+  p.settlements.concat(p.cities).forEach(nodeIdx=>{
+    const node = game.board.nodes[nodeIdx];
+    if(node && node.harbor){
+      if(node.harbor === '3:1') best = Math.min(best,3);
+      else if(node.harbor === resource) best = Math.min(best,2);
+    }
+  });
+  return best;
+}
+function openTradeModal(){
+  const fromSel = id('tradeFrom'); const toSel = id('tradeTo');
+  fromSel.innerHTML=''; toSel.innerHTML='';
+  for(let i=0;i<game.playerCount;i++){
+    const o1 = document.createElement('option'); o1.value = i; o1.textContent = `${game.players[i].name} (P${i+1})`; fromSel.appendChild(o1);
+    const o2 = document.createElement('option'); o2.value = i; o2.textContent = `${game.players[i].name} (P${i+1})`; toSel.appendChild(o2);
+  }
+  fromSel.value = game.currentPlayer;
+  toSel.value = (game.currentPlayer+1)%game.playerCount;
+  id('tradeAmount').value = 1;
+  updateBankRateInfo();
+  id('tradeStatus').textContent = 'Note: only the active player may trade. For player transfers, one side must be the active player.';
+  id('tradeModal').style.display='flex';
+}
+function closeTradeModal(){ id('tradeModal').style.display='none'; id('tradeStatus').textContent=''; }
+function updateBankRateInfo(){
+  const rates = ['wood','brick','sheep','wheat','ore'].map(r=>getBestBankRateForPlayer(game.currentPlayer,r));
+  const best = Math.min(...rates);
+  id('bankRateInfo').textContent = `Active player's best rate: ${best}:1 (per resource: wood ${rates[0]}:1, brick ${rates[1]}:1, sheep ${rates[2]}:1, wheat ${rates[3]}:1, ore ${rates[4]}:1)`;
+  id('bestRate').textContent = `Active player best bank rate: ${best}:1`;
+}
+function confirmBankTrade(){
+  const give = id('bankGive').value;
+  const get = id('bankGet').value;
+  if(!give || !get){ alert('Select both resources'); return; }
+  const p = game.players[game.currentPlayer];
+  const rate = getBestBankRateForPlayer(game.currentPlayer,give);
+  if((p.resources[give]||0) < rate){ alert(`Not enough to give ${rate} ${give} at your best rate.`); return; }
+  p.resources[give] -= rate; p.resources[get] = (p.resources[get]||0)+1;
+  log(`${p.name} traded ${rate} ${give} for 1 ${get} with the bank (rate ${rate}:1).`);
+  updatePlayerPanels();
+  setTimeout(()=>{ closeTradeModal(); },600);
+}
+function prefillTradeToCurrent(){ id('tradeTo').value = game.currentPlayer; }
+function confirmPlayerTrade(){
+  const from = Number(id('tradeFrom').value);
+  const to = Number(id('tradeTo').value);
+  const resource = id('tradeResource').value;
+  let amount = Number(id('tradeAmount').value);
+  if(isNaN(amount) || amount < 0){ alert('Invalid amount'); return; }
+  if(from === to){ alert('From and To cannot be the same'); return; }
+  if(from !== game.currentPlayer && to !== game.currentPlayer){
+    alert('One side of a player-to-player trade must be the active player.');
+    return;
+  }
+  if(amount === 0){
+    log(`${game.players[from].name} offered 0 ${resource} to ${game.players[to].name} — no transfer executed.`);
+    id('tradeStatus').textContent = 'No resources transferred (amount 0).';
+    setTimeout(()=>{ closeTradeModal(); },700);
+    return;
+  }
+  const giver = game.players[from];
+  const receiver = game.players[to];
+  if((giver.resources[resource]||0) < amount){ alert(`${giver.name} does not have enough ${resource}`); return; }
+  giver.resources[resource] -= amount;
+  receiver.resources[resource] = (receiver.resources[resource]||0) + amount;
+  log(`${giver.name} gave ${amount} ${resource} to ${receiver.name}.`);
+  updatePlayerPanels();
+  setTimeout(()=>{ closeTradeModal(); },700);
+}
+
+/* ---------- Dev card buy/play logic (with private preview & clean play UI) ---------- */
+function buyDevCard(){
+  const p = game.players[game.currentPlayer];
+  if(!hasCost(p,COSTS.dev)){ alert('Not enough resources'); return; }
+  payCost(p,COSTS.dev);
+  if(game.devDeck.length===0){ alert('No dev cards left'); return; }
+  const card = game.devDeck.pop();
+  p.devHand.push({type:card,new:true});
+  log(`${p.name} bought a dev card (secret).`);
+  updatePlayerPanels();
+  // If it's a victory point card: grant hidden VP immediately (counts for win) but do not show on main VP
+  if(card === 'vp'){
+    p.hiddenVP = (p.hiddenVP||0) + 1;
+    log(`${p.name} received a hidden Victory Point card (+1 hidden VP).`);
+    // check win — player may have reached 10 total (visible + hidden) during their turn
+    checkForWinDuringTurn(game.currentPlayer);
+  }
+  // Show private preview flow: buyer-only reveal
+  showDevPreview(game.currentPlayer, card);
+}
+
+/* Dev preview helpers */
+function showDevPreview(playerIdx, card){
+  // show initial "only buyer look" modal
+  id('devPreviewTitle').textContent = `${game.players[playerIdx].name}, this is private`;
+  id('devPreviewText').textContent = 'Only the buying player should look. Click Reveal to see the card.';
+  id('devPreviewModal').dataset.owner = playerIdx;
+  id('devPreviewModal').style.display = 'flex';
+  // store pending reveal in dataset
+  id('devPreviewModal').dataset.card = card;
+}
+function closeDevPreview(){
+  id('devPreviewModal').style.display = 'none';
+}
+function revealDevCard(){
+  const card = id('devPreviewModal').dataset.card;
+  id('devPreviewModal').style.display = 'none';
+  id('devRevealedTitle').textContent = 'Dev card preview';
+  id('devRevealedText').textContent = `You received a "${card}" card. Keep it secret. Effects: ${
+    card === 'knight' ? 'Move robber; contributes to Largest Army.' :
+    card === 'vp' ? 'Victory Point — this was already counted as hidden when you received it.' :
+    card === 'year_of_plenty' ? 'Take any 2 resources.' :
+    card === 'road_building' ? 'Place two free roads.' :
+    card === 'monopoly' ? 'Claim all of one resource from opponents.' :
+    card
+  }`;
+  id('devRevealedModal').style.display = 'flex';
+}
+function closeDevRevealed(){
+  id('devRevealedModal').style.display = 'none';
+  // done — player saw card
+}
+
+/* Play dev card modal */
+function playDevCard(){
+  const p = game.players[game.currentPlayer];
+  if(p.devHand.length===0){ alert('No devs'); return; }
+  // populate modal
+  const list = id('playDevList'); list.innerHTML = '';
+  p.devHand.forEach((d, idx)=>{
+    const row = document.createElement('div');
+    row.style.display = 'flex'; row.style.justifyContent = 'space-between'; row.style.alignItems = 'center'; row.style.padding = '8px 0';
+    const label = document.createElement('div');
+    label.textContent = `${d.type}${d.new ? ' (new)' : ''}`;
+    const btn = document.createElement('button');
+    btn.className = 'small';
+    btn.textContent = 'Play';
+    btn.onclick = ()=>{ playDevCardIndex(idx); };
+    row.appendChild(label); row.appendChild(btn);
+    list.appendChild(row);
+  });
+  id('playDevModal').style.display = 'flex';
+}
+function closePlayDevModal(){ id('playDevModal').style.display = 'none'; }
+
+function playDevCardIndex(idx){
+  const p = game.players[game.currentPlayer];
+  if(idx<0 || idx>=p.devHand.length) return;
+  const card = p.devHand[idx];
+  if(card.new && card.type !== 'vp'){ alert('Cannot play same turn you bought it (except VP cards).'); return; }
+  if(card.type === 'knight'){
+    prepareDiscardsThen(()=>{
+      p.knights++; p.playedKnightsThisTurn++;
+      log(`${p.name} played a Knight.`);
+      updateLargestArmy();
+      // after playing knight, check win for current player (largest army could have changed)
+      checkForWinDuringTurn(game.currentPlayer);
+      moveRobberMode = true;
+      showCenterMessage('Knight','Play a Knight: click a tile to move the robber.',true,'Move Robber',()=>{},true);
+    });
+  } else if(card.type === 'vp'){
+    // VP cards are counted when bought (hidden); revealing them does not need to change VP.
+    log(`${p.name} revealed a Victory Point card (+1 hidden VP already applied).`);
+    // reveal UI: we show modal but the actual VP already counted at buy time.
+    updatePlayerPanels();
+  } else if(card.type === 'year_of_plenty'){
+    const r1 = prompt('Year of Plenty — choose first resource (wood,brick,sheep,wheat,ore)');
+    if(!r1) return;
+    const r2 = prompt('Year of Plenty — choose second resource (wood,brick,sheep,wheat,ore)');
+    if(!r2) return;
+    if(!['wood','brick','sheep','wheat','ore'].includes(r1) || !['wood','brick','sheep','wheat','ore'].includes(r2)){ alert('Invalid resource(s)'); return; }
+    p.resources[r1] = (p.resources[r1]||0) + 1; p.resources[r2] = (p.resources[r2]||0) + 1;
+    log(`${p.name} played Year of Plenty and took 1 ${r1} and 1 ${r2}.`);
+    updatePlayerPanels();
+  } else if(card.type === 'monopoly'){
+    const r = prompt('Monopoly — choose a resource to take from all other players (wood,brick,sheep,wheat,ore)');
+    if(!r) return;
+    if(!['wood','brick','sheep','wheat','ore'].includes(r)){ alert('Invalid resource'); return; }
+    let total = 0;
+    game.players.forEach((pl,idx)=>{
+      if(idx===game.currentPlayer) return;
+      const have = pl.resources[r] || 0;
+      if(have>0){
+        total += have;
+        pl.resources[r] = 0;
+      }
+    });
+    game.players[game.currentPlayer].resources[r] = (game.players[game.currentPlayer].resources[r]||0) + total;
+    log(`${p.name} played Monopoly and took ${total} ${r} from other players.`);
+    updatePlayerPanels();
+  } else if(card.type === 'road_building'){
+    specialRoadBuild.active = true;
+    specialRoadBuild.remaining = 2;
+    log(`${p.name} played Road Building — place two free roads now.`);
+    buildMode = 'road';
+    highlightBuildOptions();
+  } else {
+    alert('Unknown dev card type.');
+  }
+  // remove card unless it's a VP card (we keep VP in hand so reveal later works visually)
+  if(card.type !== 'vp') p.devHand.splice(idx,1);
+  closePlayDevModal();
+  updatePlayerPanels();
+}
+
+/* ---------- Win check ---------- */
+/* Only triggers a win if the player reaches >=10 total VP during their turn */
+function checkForWinDuringTurn(playerIdx){
+  if(game.phase === 'ended') return;
+  const p = game.players[playerIdx];
+  const total = (p.vp || 0) + (p.hiddenVP || 0);
+  if(playerIdx === game.currentPlayer && total >= 10){
+    // declare winner: reveal their hidden VP cards to all
+    game.phase = 'ended';
+    const visible = p.vp || 0;
+    const hidden = p.hiddenVP || 0;
+    const message = `${p.name} wins!\nVisible VP: ${visible}\nHidden VP (revealed): ${hidden}\nTotal: ${total}`;
+    log(message);
+    // build a reveal text showing each player's hidden VP (only reveal the winner's hidden cards as requested)
+    const revealText = `${p.name} had ${hidden} hidden VP card(s).`;
+    showCenterMessage('Game Over', `${p.name} wins!\n\n${revealText}\n\nTotal: ${total}`, false, 'OK', ()=>{ /* do nothing further */}, true);
+    // also update UI to show winner state
+    updatePlayerPanels();
+  }
+}
+
+/* ---------- Scoring helpers (updated thresholds) ---------- */
+function updateLargestArmy(){
+  // Threshold: more than 3 knights (>=4) to get Largest Army (per your request)
+  const knightCounts = game.players.map(p=>p.knights || 0);
+  const maxKnights = Math.max(...knightCounts);
+  let holder = -1;
+  if(maxKnights >= 4) holder = game.players.findIndex(p=>p.knights === maxKnights);
+  game.players.forEach((p,idx)=>{
+    if(idx===holder){
+      if(!p._largest){ p._largest = true; p.vp += 2; log(`${p.name} gained Largest Army (+2 VP).`); }
+    } else {
+      if(p._largest){ p._largest = false; p.vp -= 2; log(`${p.name} lost Largest Army (-2 VP).`); }
+    }
+  });
+  updatePlayerPanels();
+  // if the new holder is the current player, check for win
+  if(holder >= 0 && holder === game.currentPlayer) checkForWinDuringTurn(holder);
+}
+function updateLongestRoads(){
+  // Compute longest connected path length per player but require >5 roads (i.e. >=6) to award 2 VP
+  const longest = Array(game.playerCount).fill(0);
+  for(let pid=0; pid<game.playerCount; pid++){
+    const edges = game.board.edges.filter(e=>e.built && e.built.player===pid);
+    const adj = {};
+    edges.forEach(e=>{ adj[e.a]=adj[e.a]||[]; adj[e.b]=adj[e.b]||[]; adj[e.a].push(e.b); adj[e.b].push(e.a); });
+    let best=0;
+    function dfs(node, seen){
+      best=Math.max(best, seen.size);
+      for(const nb of (adj[node]||[])){
+        const key = node<nb? `${node}_${nb}`: `${nb}_${node}`;
+        if(seen.has(key)) continue;
+        const nset=new Set(seen);
+        nset.add(key);
+        dfs(nb,nset);
+      }
+    }
+    for(const n in adj) dfs(Number(n), new Set());
+    // best is count of edges in the path
+    longest[pid]=best;
+  }
+  const maxLen = Math.max(...longest);
+  let holder = -1;
+  if(maxLen >= 6) holder = longest.indexOf(maxLen); // require >=6 roads (more than 5)
+  game.players.forEach((p,idx)=>{
+    if(idx===holder){
+      if(!p._longest){ p._longest = true; p.vp += 2; log(`${p.name} gained Longest Road (+2 VP).`); }
+    } else {
+      if(p._longest){ p._longest = false; p.vp -= 2; log(`${p.name} lost Longest Road (-2 VP).`); }
+    }
+  });
+  updatePlayerPanels();
+  // if the new holder is the current player, check for win
+  if(holder >= 0 && holder === game.currentPlayer) checkForWinDuringTurn(holder);
+}
+
+/* ---------- Floating resource animation ---------- */
+function animateResourceGain(resource, fromX, fromY, amount=1){
+  const fx = id('fxLayer');
+  for(let i=0;i<amount;i++){
+    const el = document.createElement('div');
+    el.className='floating';
+    el.style.left = (fromX - 12 + (Math.random()*24-12)) + 'px';
+    el.style.top = (fromY - 12 + (Math.random()*24-12)) + 'px';
+    el.style.zIndex = 9999;
+    el.textContent = RES_ICON[resource] + ' ' + resource[0].toUpperCase();
+    fx.appendChild(el);
+    const boardRect = id('boardWrap').getBoundingClientRect();
+    const hud = id('currentResources').getBoundingClientRect();
+    const targetX = hud.left + hud.width/2;
+    const targetY = hud.top + hud.height/2;
+    setTimeout(()=>{ el.style.transform = `translate(${(targetX - boardRect.left) - parseFloat(el.style.left)}px, ${(targetY - boardRect.top) - parseFloat(el.style.top)}px) scale(.6)`; el.style.opacity='0'; }, 20);
+    setTimeout(()=> el.remove(), 1400);
+  }
+}
+
+/* ---------- Player panels ---------- */
+function updatePlayerPanels(){
+  const container = id('playersList');
+  container.innerHTML = '';
+  game.players.forEach((p, idx)=>{
+    const row = document.createElement('div');
+    row.className = 'player-row';
+    row.style.border = p.id === game.currentPlayer ? `2px solid ${p.color}` : '1px solid rgba(0,0,0,0.03)';
+    // main VP shows only visible vp (hidden VP is NOT shown)
+    row.innerHTML = `<div style="display:flex;gap:8px;align-items:center"><div class="player-dot" style="background:${p.color}"></div><div><strong>${p.name}</strong><div class="muted">Knights: ${p.knights} • Dev: ${p.devHand.length}</div></div></div><div style="text-align:right"><div style="display:flex;align-items:center;gap:6px"><div class="vp">${p.vp}</div></div></div>`;
+    // clicking a player shows that player's resources/info anytime (per request)
+    row.style.cursor = 'pointer';
+    row.onclick = ()=> showPlayerInfo(idx);
+
+    // Add badges for Biggest Road / Biggest Army next to VP (as small cards)
+    const rightArea = row.querySelector('div[style*="text-align:right"]');
+    if(rightArea){
+      if(p._longest){
+        const b = document.createElement('span');
+        b.className = 'badge-flag';
+        b.textContent = 'Biggest Road';
+        rightArea.appendChild(b);
+      }
+      if(p._largest){
+        const b2 = document.createElement('span');
+        b2.className = 'badge-flag';
+        b2.textContent = 'Biggest Army';
+        rightArea.appendChild(b2);
+      }
+    }
+
+    container.appendChild(row);
+  });
+  const cp = game.players[game.currentPlayer];
+  id('currentPlayerVP').textContent = cp.vp;
+  const resdiv = id('currentResources');
+  resdiv.innerHTML = '';
+  ['wood','brick','sheep','wheat','ore'].forEach(r=>{
+    const pill = document.createElement('div');
+    pill.className='res-pill';
+    pill.textContent = `${RES_ICON[r]} ${r} : ${cp.resources[r]||0}`;
+    resdiv.appendChild(pill);
+  });
+}
+
+/* show player info modal */
+function showPlayerInfo(pid){
+  const p = game.players[pid];
+  id('playerInfoTitle').textContent = `${p.name} (P${pid+1})`;
+  id('playerInfoBody').innerHTML = `
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <div class="player-dot" style="background:${p.color}"></div>
+      <div style="font-weight:800">${p.name}</div>
+    </div>
+    <div style="margin-top:6px"><strong>VP (visible):</strong> ${p.vp}</div>
+    <div style="margin-top:6px"><strong>Knights played:</strong> ${p.knights}</div>
+    <div style="margin-top:10px"><strong>Resources:</strong></div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <div class="res-pill">${RES_ICON.wood} wood: ${p.resources.wood||0}</div>
+      <div class="res-pill">${RES_ICON.brick} brick: ${p.resources.brick||0}</div>
+      <div class="res-pill">${RES_ICON.sheep} sheep: ${p.resources.sheep||0}</div>
+      <div class="res-pill">${RES_ICON.wheat} wheat: ${p.resources.wheat||0}</div>
+      <div class="res-pill">${RES_ICON.ore} ore: ${p.resources.ore||0}</div>
+    </div>
+    <div style="margin-top:10px"><strong>Dev cards:</strong> ${p.devHand.map(d=>d.type).join(', ') || 'None'}</div>
+  `;
+  id('playerInfoModal').style.display = 'flex';
+}
+function closePlayerInfo(){ id('playerInfoModal').style.display = 'none'; }
+
+/* ---------- End turn ---------- */
+function endTurn(){
+  const p = game.players[game.currentPlayer];
+  p.rolledThisTurn = false;
+  p.playedKnightsThisTurn = 0;
+  p.devHand.forEach(d=>d.new=false);
+  game.currentPlayer = (game.currentPlayer + 1) % game.playerCount;
+  id('diceBox').textContent = '-';
+  log(`Turn ended. Now ${game.players[game.currentPlayer].name}'s turn.`);
+  updateBankRateInfo();
+  renderBoard(); updatePlayerPanels();
+}
+
+/* ---------- Wiring UI buttons ---------- */
+id('newGame').addEventListener('click', ()=> startNewGame());
+/* main screen playerCount select removed -> guard assignment to avoid errors */
+if(id('playerCount')) id('playerCount').value = 4;
+id('rollBtn').addEventListener('click', ()=> rollDiceAction());
+id('endTurnBtn').addEventListener('click', ()=> endTurn());
+id('buildBtn').addEventListener('click', ()=> openModal());
+id('buyDevBtn').addEventListener('click', ()=> buyDevCard());
+id('playDevBtn').addEventListener('click', ()=> playDevCard());
+id('tradeBtn').addEventListener('click', ()=> openTradeModal());
+/* robberBtn element was removed from main screen; guard its event hookup so no error occurs */
+if(id('robberBtn')){
+  id('robberBtn').addEventListener('click', ()=> { moveRobberMode = true; showCenterMessage('Move Robber','Click a tile to move the robber now.',true,'OK',()=>{},true); });
+}
+id('centerNext').onclick = ()=>{ id('centerMessageArea').style.display='none'; id('centerMessageArea').setAttribute('aria-hidden','true'); };
+id('centerSkip').onclick = ()=>{ id('centerMessageArea').style.display='none'; localStorage.setItem('catan_tutorial_done','1'); };
+
+/* ---------- Dev preview helpers references (to avoid undefined earlier) ---------- */
+if(!id('devPreviewModal')) console.log('devPreviewModal missing');
+
+/* ---------- Initialization ---------- */
+(function init(){ 
+  // start with setup modal so players choose names/colors
+  openSetupModal();
+  setTimeout(()=>{ if(!localStorage.getItem('catan_tutorial_done')) startTutorial(); }, 400); 
+})();
+
+/* ---------- Tutorial ---------- */
+function startTutorial(){ if(localStorage.getItem('catan_tutorial_done')) return; const steps=[ {title:'Welcome to Catan', text:'This tutorial will guide you. Tap Next to continue.'}, {title:'Initial Placement', text:'Each player places 2 settlements and a road. After setup finishes each player receives 1 resource from each adjacent hex of both of their settlements.'}, {title:'Roll Dice', text:'On your turn roll the dice. Numbers produce resources from adjacent tiles. If 7 is rolled, discard half (rounded down) if you have >7, then move robber.'}, {title:'Building', text:'Use Build → Settlement/Road/City. You must be connected by roads for normal builds.'}, {title:'Trade & Devs', text:'Trade with the bank (4:1 always; improved to 3:1 or 2:1 if you control a harbor). Buy dev cards with Ore+Wheat+Sheep.'}, {title:'Dev cards', text:'Knight moves robber (and — per this app — triggers discard step). Year of Plenty, Monopoly, Road Building behave like the physical game.'}, {title:'Ready', text:'That’s it! The big guidance messages will show tips during play. Good luck!'} ]; let idx=0; const next = ()=>{ if(idx >= steps.length){ localStorage.setItem('catan_tutorial_done','1'); id('centerMessageArea').style.display='none'; return; } showCenterMessage(steps[idx].title, steps[idx].text, true, 'Next', ()=>{ idx++; next(); }, idx < steps.length-1); }; next(); }
+
+/* small helper used earlier */
+function autoCenterAction(title,text,t){
+  showCenterMessage(title,text,true,'OK',()=>{ id('centerMessageArea').style.display='none'; },true);
+}
+
+/* small center message util (already used in file) */
+function showCenterMessage(title,text,showButtons,buttonText,cb,closable){
+  id('centerTitle').textContent = title;
+  id('centerText').textContent = text;
+  id('centerMessageArea').style.display = 'flex';
+  id('centerMessageArea').setAttribute('aria-hidden', 'false');
+  if(cb){ id('centerNext').onclick = ()=>{ id('centerMessageArea').style.display = 'none'; cb(); }; }
+}
+
+/* ---------- Resource gains animation helper ---------- */
+/**
+ * compactGains: map playerId -> {wood:,brick:,sheep:,wheat:,ore:}
+ * Displays a temporary badge next to each player's row with the gained resources + counts.
+ * The badge disappears after 2000ms.
+ */
+function showResourceGainsAnimation(compactGains){
+  if(!compactGains || Object.keys(compactGains).length === 0) return;
+  const container = id('playersList');
+  if(!container) return;
+  // For stability, ensure rows are present
+  const rows = Array.from(container.children);
+  Object.keys(compactGains).forEach(pidStr=>{
+    const pid = Number(pidStr);
+    const gains = compactGains[pid];
+    if(!gains) return;
+    const row = rows[pid];
+    if(!row) return;
+    // create badge
+    const badge = document.createElement('div');
+    badge.className = 'gain-badge';
+    badge.dataset.pid = pid;
+    // build pills for non-zero resources
+    ['wood','brick','sheep','wheat','ore'].forEach(r=>{
+      const num = gains[r] || 0;
+      if(num > 0){
+        const pill = document.createElement('div');
+        pill.className = 'gain-pill';
+        pill.textContent = `${RES_ICON[r]} ${num}`;
+        badge.appendChild(pill);
+      }
+    });
+    // append badge to row (right side)
+    row.appendChild(badge);
+    // remove after 2 seconds with fade
+    setTimeout(()=>{
+      badge.style.opacity = '0';
+      badge.style.transform = 'translateY(-6px)';
+      setTimeout(()=> { badge.remove(); }, 320);
+    }, 2000);
+  });
+}
+
+/* ---------- End of script ---------- */
+
+</script>
+</body>
+</html>
