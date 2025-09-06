@@ -45,11 +45,13 @@ This is a **browser-based implementation of the board game Catan** with a fixed 
 ## 🚀 Getting Started
 
 1. Clone this repository:
-   ```bash
+```bash
    git clone https://github.com/yourusername/catan.git
    cd catan
 ```
 
+
+---
 2. Open the game:
 
    * Just double-click **`catan.html`** to open in your browser
